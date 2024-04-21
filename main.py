@@ -1,5 +1,7 @@
-    import random
+import random
 import statistics
+
+import numpy as np
 
 
 class Bandit:
@@ -39,16 +41,16 @@ class TestBed:
         self.mean: float = 0
 
     def best_bandit(self) -> Bandit:
-        mean_list = [bandit.observed_mean for bandit in bandits]
-        return bandits[mean_list.index(max(mean_list))]
+        mean_list = [bandit.observed_mean for bandit in self.bandits]
+        return self.bandits[mean_list.index(max(mean_list))]
 
     def reset(self):
-        _ = [bandit.reset() for bandit in bandits]
+        _ = [bandit.reset() for bandit in self.bandits]
         self.observations = []
         self.mean_history = []
         self.mean = 0
 
-    def run_trial(self, steps: int, epsilon: float):
+    def run_trials(self, steps: int, epsilon: float):
         for _ in range(steps):
             if random.uniform(0, 1) <= epsilon:
                 bandit = random.choice(self.bandits)
@@ -66,19 +68,19 @@ def rolling_incremental_mean(observations: list[float]) -> list[float]:
     rolling_mean: list[float] = []
     for counter, observation in enumerate(observations):
         if counter == 0:
-            mean = 0
+            mean: float = 0.0
         mean = incremental_mean(mean=mean, observation=observation, n=counter + 1)
         rolling_mean += [mean]
     return rolling_mean
 
 
-def run_experiments(bandit_count: int, trials: int, experiments: int, epsilon: float):
-    container = np.empty((experiments, trials))
+def run_experiments(bandit_count: int, steps: int, experiments: int, epsilon: float):
+    container = np.empty((experiments, steps))
     for counter in range(experiments):
         bandits = [Bandit(mean=random.gauss(), stdev=1) for _ in range(bandit_count)]
         test_bed = TestBed(bandits)
 
-        results, bandits_output = test_bed.run_trials(trials=trials, epsilon=epsilon)
+        results, bandits_output = test_bed.run_trials(steps=steps, epsilon=epsilon)
         means = rolling_incremental_mean(results)
         test_bed.reset()
         container[counter, :] = means
@@ -87,12 +89,11 @@ def run_experiments(bandit_count: int, trials: int, experiments: int, epsilon: f
 
 if __name__ == "__main__":
     results_010 = run_experiments(
-        bandit_count=10, trials=1000, experiments=2000, epsilon=0.1
+        bandit_count=10, steps=1000, experiments=2000, epsilon=0.1
     )
     results_001 = run_experiments(
-        bandit_count=10, trials=1000, experiments=2000, epsilon=0.01
+        bandit_count=10, steps=1000, experiments=2000, epsilon=0.01
     )
     results_000 = run_experiments(
-        bandit_count=10, trials=1000, experiments=2000, epsilon=0.00
+        bandit_count=10, steps=1000, experiments=2000, epsilon=0.00
     )
-
