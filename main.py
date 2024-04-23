@@ -6,16 +6,17 @@ import numpy as np
 
 class Bandit:
     def __init__(self, mean: float, stdev: float) -> None:
-        self.true_mean = mean
-        self.true_stdev = stdev
+        self.true_mean: float = mean
+        self.true_stdev: float = stdev
         self.observations: list[float] = []
-        self.observed_mean: float = 0
+        self.observed_means: list[float] = []
+        self.latest_mean: float = self.observed_means[-1]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"n: {len(self.observations)} | "
             f"True Mean: {self.true_mean:.3f} | "
-            f"Observed Mean: {self.observed_mean:.3f} | "
+            f"Observed Mean: {self.latest_mean:.3f} | "
             f"True STDev: {self.true_stdev:.3f} | "
             f"Observed STDev: {statistics.stdev(self.observations):.3f}"
         )
@@ -27,15 +28,19 @@ class Bandit:
     def step(self) -> float:
         observation = random.gauss(mu=self.true_mean, sigma=self.true_stdev)
         self.observations += [observation]
-        self.observed_mean = incremental_mean(
-            mean=self.observed_mean, observation=observation, n=len(self.observations)
-        )
+        self.observed_means += [
+            incremental_mean(
+                mean=self.observed_mean,
+                observation=observation,
+                n=len(self.observations),
+            )
+        ]
         return observation
 
 
 class TestBed:
     def __init__(self, bandits: list[Bandit]) -> None:
-        self.bandits = bandits
+        self.bandits: list[Bandit] = bandits
         self.observations: list[float] = []
         self.mean_history: list[float] = []
         self.mean: float = 0
