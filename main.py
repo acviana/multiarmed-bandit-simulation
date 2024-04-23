@@ -73,9 +73,13 @@ def rolling_incremental_mean(observations: list[float]) -> list[float]:
     rolling_mean: list[float] = []
     for counter, observation in enumerate(observations):
         if counter == 0:
-            mean: float = 0.0
-        mean = incremental_mean(mean=mean, observation=observation, n=counter + 1)
-        rolling_mean += [mean]
+            rolling_mean += [observation]
+        else:
+            rolling_mean += [
+                incremental_mean(
+                    mean=rolling_mean[-1], observation=observation, n=counter + 1
+                )
+            ]
     return rolling_mean
 
 
