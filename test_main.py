@@ -1,6 +1,6 @@
 import pytest
 
-from main import Bandit
+from main import Bandit, TestBed
 
 
 class TestBandit:
@@ -19,3 +19,14 @@ class TestBandit:
         assert len(self.bandit) == 1
         assert len(self.bandit.observations) == 1
         assert len(self.bandit.observed_means) == 1
+
+
+class TestTestBed:
+    def setup_method(self):
+        self.test_bed = TestBed([Bandit(mean=0, stdev=1) for _ in range(10)])
+
+    def test_best_bandit(self):
+        self.test_bed.best_bandit()
+
+    def test_run_trials(self):
+        self.test_bed.run_trials(steps=10, epsilon=0.1)

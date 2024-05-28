@@ -7,7 +7,7 @@ lint:
 pre-commit: format lint type-check test
 
 test:
-	pytest
+	pytest test_main.py
 
 type-check:
 	mypy main.py
