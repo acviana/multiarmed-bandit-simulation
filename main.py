@@ -36,10 +36,10 @@ class Bandit:
                 f"Can not calculate mean for bandit with length {len(self)}"
             )
 
-    def reset(self) -> None:
-        # I think we can remove this?
-        self.observations = []
-        self.observed_means = []
+    #    def reset(self) -> None:
+    #       # TODO: I think we can remove this?
+    #        self.observations = []
+    #        self.observed_means = []
 
     def step(self) -> float:
         observation = random.gauss(mu=self.true_mean, sigma=self.true_stdev)
@@ -50,7 +50,7 @@ class Bandit:
             next_mean = incremental_mean(
                 mean=self.latest_mean,
                 observation=observation,
-                n=len(self.observations),
+                n=len(self.observations) - 1,
             )
         self.observed_means += [next_mean]
         return observation
@@ -71,7 +71,7 @@ class TestBed:
         mean_list = [
             bandit.latest_mean
             for bandit in self.bandits
-            if len(bandit.observations) > 1
+            if len(bandit.observations) >= 1
         ]
         if len(mean_list) == 0:
             bandit = random.choice(self.bandits)
@@ -79,21 +79,33 @@ class TestBed:
             bandit = self.bandits[mean_list.index(max(mean_list))]
         return bandit
 
-    def reset(self):
-        # I think we can remove this?
-        _ = [bandit.reset() for bandit in self.bandits]
-        self.observations = []
-        self.mean_history = []
-        self.mean = 0
+    #   def reset(self):
+    #       # TODO: I think we can remove this?
+    #       _ = [bandit.reset() for bandit in self.bandits]
+    #       self.observations = []
+    #       self.mean_history = []
+    #       self.mean = 0
 
     def run_trials(self, steps: int, epsilon: float):
         for step in range(steps):
-            if step == 0 or random.uniform(0, 1) <= epsilon:
+            if random.uniform(0, 1) <= epsilon:
                 bandit = random.choice(self.bandits)
             else:
                 bandit = self.best_bandit()
             self.observations += [bandit.step()]
-        self.mean_history = rolling_incremental_mean(self.observations)
+            if step == 0:
+                self.mean_history += [self.observations[0]]
+            else:
+                self.mean_history += [
+                    incremental_mean(
+                        self.mean_history[-1],
+                        self.observations[-1],
+                        len(self.observations) - 1,
+                    )
+                ]
+
+        # TODO: Should we do this incrementally within the for loop?
+        # self.mean_history = rolling_incremental_mean(self.observations)
         # return self.observations, self.bandits
 
 
@@ -118,7 +130,10 @@ def rolling_incremental_mean(observations: list[float]) -> list[float]:
 def run_experiments(bandit_count: int, steps: int, experiments: int, epsilon: float):
     container = np.empty((experiments, steps))
     for counter in range(experiments):
-        bandits = [Bandit(mean=random.gauss(), stdev=1) for _ in range(bandit_count)]
+        bandits = [
+            Bandit(mean=random.gauss(mu=0, sigma=1), stdev=1)
+            for _ in range(bandit_count)
+        ]
         test_bed = TestBed(bandits)
 
         test_bed.run_trials(steps=steps, epsilon=epsilon)
@@ -131,6 +146,7 @@ def run_experiments(bandit_count: int, steps: int, experiments: int, epsilon: fl
     return container.mean(axis=0)
 
 
+# TODO: If this is a library we can remove this
 if __name__ == "__main__":
     results_010 = run_experiments(
         bandit_count=10, steps=1000, experiments=2000, epsilon=0.1
