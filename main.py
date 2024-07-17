@@ -6,14 +6,14 @@ import numpy as np
 
 class Bandit:
     """
-    A gaussian random number generator.
+    A gaussian random number generator with history of pervious values and means.
     """
 
     def __init__(self, mean: float, stdev: float) -> None:
         self.true_mean: float = mean
         self.true_stdev: float = stdev
         self.observations: list[float] = []
-        self.observed_means: list[float] = []
+        self.means: list[float] = []
 
     def __len__(self) -> int:
         return len(self.observations)
@@ -21,9 +21,10 @@ class Bandit:
     def __str__(self) -> str:
         return (
             f"n: {len(self.observations)} | "
+            f"Observed Mean: {self.means[-1]:.3f} | "
             f"True Mean: {self.true_mean:.3f} | "
-            f"True STDev: {self.true_stdev:.3f} | "
             f"Observed STDev: {statistics.stdev(self.observations):.3f}"
+            f"True STDev: {self.true_stdev:.3f} | "
         )
 
     def step(self) -> float:
@@ -33,11 +34,11 @@ class Bandit:
             next_mean = observation
         else:
             next_mean = incremental_mean(
-                mean=self.observed_means[-1],
+                mean=self.means[-1],
                 observation=observation,
                 n=len(self.observations) - 1,
             )
-        self.observed_means += [next_mean]
+        self.means += [next_mean]
         # TODO: Do I need to return anything?
         return observation
 
@@ -50,32 +51,28 @@ class TestBed:
     def __init__(self, bandits: list[Bandit]) -> None:
         self.bandits: list[Bandit] = bandits
         self.observations: list[float] = []
-        self.mean_history: list[float] = []
-        self.mean: float = 0
+        self.means: list[float] = []
 
     def __str__(self) -> str:
         return f"Bandits: {len(self.bandits)}, Steps: {len(self.observations)}"
 
     def best_bandit(self) -> Bandit:
-        mean_list = [
-            bandit.observed_means[-1] if len(bandit.observations) >= 1 else None
-            for bandit in self.bandits
-        ]
-        if len(mean_list) == 0:
+        """Return the bandit with the highest mean reward."""
+        bandit_dict: dict[float, int] = {
+            bandit.means[-1]: index
+            for index, bandit in enumerate(self.bandits)
+            if len(bandit.observations) >= 1
+        }
+        bandit: Bandit
+        if len(bandit_dict) == 0:
             bandit = random.choice(self.bandits)
         else:
-            ## TODO: This is wrong. The list lengths are not the same.
-            bandit = self.bandits[mean_list.index(max(mean_list))]
+            bandit = self.bandits[bandit_dict[max(bandit_dict.keys())]]
         return bandit
 
-    #   def reset(self):
-    #       # TODO: I think we can remove this?
-    #       _ = [bandit.reset() for bandit in self.bandits]
-    #       self.observations = []
-    #       self.mean_history = []
-    #       self.mean = 0
-
     def run_trials(self, steps: int, epsilon: float):
+        """Run a trial picking either the best bandit or a random bandit with probabily epsilon."""
+        bandit: Bandit
         for step in range(steps):
             if random.uniform(0, 1) <= epsilon:
                 bandit = random.choice(self.bandits)
@@ -83,19 +80,15 @@ class TestBed:
                 bandit = self.best_bandit()
             self.observations += [bandit.step()]
             if step == 0:
-                self.mean_history += [self.observations[0]]
+                self.means += [self.observations[0]]
             else:
-                self.mean_history += [
+                self.means += [
                     incremental_mean(
-                        self.mean_history[-1],
+                        self.means[-1],
                         self.observations[-1],
                         len(self.observations) - 1,
                     )
                 ]
-
-        # TODO: Should we do this incrementally within the for loop?
-        # self.mean_history = rolling_incremental_mean(self.observations)
-        # return self.observations, self.bandits
 
 
 def incremental_mean(mean: float, observation: float, n: int) -> float:
@@ -127,11 +120,11 @@ def run_experiments(bandit_count: int, steps: int, experiments: int, epsilon: fl
 
         test_bed.run_trials(steps=steps, epsilon=epsilon)
         # results, bandits_output = test_bed.run_trials(steps=steps, epsilon=epsilon)
-        # TODO: I think I can replace this with a call to TestBed.mean_history
+        # TODO: I think I can replace this with a call to TestBed.means
         # means = rolling_incremental_mean(results)
         # test_bed.reset()
         # container[counter, :] = means
-        container[counter, :] = test_bed.mean_history
+        container[counter, :] = test_bed.means
     return container.mean(axis=0)
 
 
