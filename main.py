@@ -22,24 +22,9 @@ class Bandit:
         return (
             f"n: {len(self.observations)} | "
             f"True Mean: {self.true_mean:.3f} | "
-            f"Observed Mean: {self.latest_mean:.3f} | "
             f"True STDev: {self.true_stdev:.3f} | "
             f"Observed STDev: {statistics.stdev(self.observations):.3f}"
         )
-
-    @property
-    def latest_mean(self) -> float:
-        try:
-            return self.observed_means[-1]
-        except IndexError:
-            raise IndexError(
-                f"Can not calculate mean for bandit with length {len(self)}"
-            )
-
-    #    def reset(self) -> None:
-    #       # TODO: I think we can remove this?
-    #        self.observations = []
-    #        self.observed_means = []
 
     def step(self) -> float:
         observation = random.gauss(mu=self.true_mean, sigma=self.true_stdev)
@@ -48,11 +33,12 @@ class Bandit:
             next_mean = observation
         else:
             next_mean = incremental_mean(
-                mean=self.latest_mean,
+                mean=self.observed_means[-1],
                 observation=observation,
                 n=len(self.observations) - 1,
             )
         self.observed_means += [next_mean]
+        # TODO: Do I need to return anything?
         return observation
 
 
@@ -67,15 +53,18 @@ class TestBed:
         self.mean_history: list[float] = []
         self.mean: float = 0
 
+    def __str__(self) -> str:
+        return f"Bandits: {len(self.bandits)}, Steps: {len(self.observations)}"
+
     def best_bandit(self) -> Bandit:
         mean_list = [
-            bandit.latest_mean
+            bandit.observed_means[-1] if len(bandit.observations) >= 1 else None
             for bandit in self.bandits
-            if len(bandit.observations) >= 1
         ]
         if len(mean_list) == 0:
             bandit = random.choice(self.bandits)
         else:
+            ## TODO: This is wrong. The list lengths are not the same.
             bandit = self.bandits[mean_list.index(max(mean_list))]
         return bandit
 
