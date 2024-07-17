@@ -28,8 +28,10 @@ class Bandit:
         )
 
     def step(self) -> float:
-        observation = random.gauss(mu=self.true_mean, sigma=self.true_stdev)
+        """Draw one observation and update object attributes."""
+        observation: float = random.gauss(mu=self.true_mean, sigma=self.true_stdev)
         self.observations += [observation]
+        next_mean: float
         if len(self.observations) == 1:
             next_mean = observation
         else:
@@ -39,7 +41,6 @@ class Bandit:
                 n=len(self.observations) - 1,
             )
         self.means += [next_mean]
-        # TODO: Do I need to return anything?
         return observation
 
 
